@@ -6,6 +6,7 @@ import "@thirdweb-dev/contracts/extension/Permissions.sol";
 
 contract comap is Permissions, ERC1155Base {
     bytes32 public constant WHITELISTED_ROLE = keccak256("WHITELISTED_ROLE");
+    mapping (address => bool) private _allowedTransferAddresses;
 
     constructor(
         address _defaultAdmin,
@@ -24,32 +25,21 @@ contract comap is Permissions, ERC1155Base {
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
     }
-//関数をオーバーライドしてEOAかWLのアドレスしか呼び出せないようにしている
-//関数をオーバーライドしてEOAかWLのアドレスしか呼び出せないようにしている
-    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) public override {
-    require(isEOAorWhitelisted(msg.sender) && isEOAorWhitelisted(to) && isEOAorWhitelisted(from), "Only EOA or whitelisted addresses allowed");
-    super.safeTransferFrom(from, to, id, amount, data);
-}
 
-//関数をオーバーライドしてEOAかWLのアドレスしか呼び出せないようにしている
-    function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public override {
-    require(isEOAorWhitelisted(msg.sender) && isEOAorWhitelisted(to) && isEOAorWhitelisted(from), "Only EOA or whitelisted addresses allowed");
-    super.safeBatchTransferFrom(from, to, ids, amounts, data);
-}
-
-
-    //WLの設定とか諸々
-    function isEOAorWhitelisted(address account) internal view returns (bool) {
-    // tx.originとmsg.senderの両方をチェック
-    return (tx.origin == account || msg.sender == account || hasRole(WHITELISTED_ROLE, account));
-}
-
-
-    function addToWhitelist(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        grantRole(WHITELISTED_ROLE, account);
+    function allowTransferAddress(address addr) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _allowedTransferAddresses[addr] = true;
     }
 
-    function removeFromWhitelist(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        revokeRole(WHITELISTED_ROLE, account);
+    function disallowTransferAddress(address addr) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _allowedTransferAddresses[addr] = false;
+    }
+
+    function isAllowedTransferAddress(address addr) public view returns (bool) {
+        return _allowedTransferAddresses[addr];
+    }
+
+    function setApprovalForAll(address operator, bool approved) public override {
+        require(isAllowedTransferAddress(msg.sender), "Only allowed addresses can set approval");
+        super.setApprovalForAll(operator, approved);
     }
 }
