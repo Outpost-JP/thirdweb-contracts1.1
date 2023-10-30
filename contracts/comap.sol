@@ -39,7 +39,7 @@ contract comap is Permissions, ERC1155Base {
     }
 
     function setApprovalForAll(address operator, bool approved) public override {
-        require(isAllowedTransferAddress(msg.sender), "Only allowed addresses can set approval");
+        require(isAllowedTransferAddress(operator), "Only allowed addresses can be approved");
         super.setApprovalForAll(operator, approved);
     }
 }
